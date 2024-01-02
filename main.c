@@ -14,6 +14,7 @@
 #include "usbcfg.h"
 #include "utils.h"
 #include "as5048b.h"
+#include "as3935.h"
 
 /*
  * Watchdog deadline set to more than one second (LSI=40000 / (64 * 1000)).
@@ -42,6 +43,17 @@ static AS5048BConfig as5048cfg = {
 };
 
 static AS5048BDriver AS5048B;
+
+/*===========================================================================*/
+/* AS3935 Lighting sensor                                                    */
+/*===========================================================================*/
+static const AS3935Config as3935cfg = {
+    &I2CD1,
+    &i2cfg1,
+    AS3935_ADR_3,
+};
+
+static AS3935Driver AS3935;
 
 /*===========================================================================*/
 /* PWM                                                                       */
@@ -82,11 +94,20 @@ static void cmd_r(BaseSequentialStream *chp, int argc, char *argv[])
   }
 }
 
+static void cmd_l(BaseSequentialStream *chp, int argc, char *argv[])
+{
+  (void)argc;
+  (void)argv;
+
+  chprintf(chp, "Distance to storm: %d km \r\n", AS3935.vmt->distanceToStorm(&AS3935));
+}
+
 thread_t *shelltp = NULL;
 #define SHELL_WA_SIZE THD_WORKING_AREA_SIZE(2048)
 static const ShellCommand commands[] = {
     {"pwm", cmd_pwm},
     {"r", cmd_r},
+    {"l", cmd_l},
     {NULL, NULL}};
 
 static const ShellConfig shell_cfg1 = {
@@ -161,6 +182,12 @@ int main(void)
   AS5048B.vmt->zeroRegW(&AS5048B, 0);
 
   /*
+   * Starts the Lighting sensor driver.
+   */
+  as3935ObjectInit(&AS3935);
+  as3935Start(&AS3935, &as3935cfg);
+
+  /*
    * Normal main() thread activity, in this demo it does nothing except
    * sleeping in a loop and check the button state.
    */
@@ -171,9 +198,6 @@ int main(void)
       shelltp = chThdCreateFromHeap(NULL, SHELL_WA_SIZE,
                                     "shell", NORMALPRIO + 1,
                                     shellThread, (void *)&shell_cfg1);
-    }
-    if (palReadPad(GPIOA, GPIOA_BUTTON))
-    {
     }
     chEvtDispatch(evhndl, chEvtWaitOneTimeout(EVENT_MASK(0), TIME_MS2I(500)));
     wdgReset(&WDGD1);
