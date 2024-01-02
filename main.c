@@ -1,18 +1,9 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
-    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
+ * Copyright (c) 2024 Witold Olechowski.
+ */
 
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-        http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-*/
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -26,31 +17,28 @@
  * Watchdog deadline set to more than one second (LSI=40000 / (64 * 1000)).
  */
 static const WDGConfig wdgcfg = {
-  STM32_IWDG_PR_64,
-  STM32_IWDG_RL(1000)
-};
-
+    STM32_IWDG_PR_64,
+    STM32_IWDG_RL(1000)};
 
 /*===========================================================================*/
 /* PWM                                                             */
 /*===========================================================================*/
 static PWMConfig pwmcfg = {
-    8000000,                                    /* 10kHz PWM clock frequency.   */
-    1000,                                    /* Initial PWM period 1S.       */
+    8000000, /* 10kHz PWM clock frequency.   */
+    1000,    /* Initial PWM period 1S.       */
     NULL,
-    {
-    {PWM_OUTPUT_ACTIVE_HIGH, NULL},
-	{PWM_OUTPUT_ACTIVE_HIGH, NULL},
-    {PWM_OUTPUT_DISABLED, NULL},
-    {PWM_OUTPUT_DISABLED, NULL}
-    },
+    {{PWM_OUTPUT_ACTIVE_HIGH, NULL},
+     {PWM_OUTPUT_ACTIVE_HIGH, NULL},
+     {PWM_OUTPUT_DISABLED, NULL},
+     {PWM_OUTPUT_DISABLED, NULL}},
     0,
     0,
-    0
-};
+    0};
 
-static void cmd_pwm(BaseSequentialStream *chp, int argc, char *argv[]) {
-  if (argc == 0) {
+static void cmd_pwm(BaseSequentialStream *chp, int argc, char *argv[])
+{
+  if (argc == 0)
+  {
     chprintf(chp, "Usage: pwm 1000\r\n");
     return;
   }
@@ -58,23 +46,23 @@ static void cmd_pwm(BaseSequentialStream *chp, int argc, char *argv[]) {
 }
 
 thread_t *shelltp = NULL;
-#define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
+#define SHELL_WA_SIZE THD_WORKING_AREA_SIZE(2048)
 static const ShellCommand commands[] = {
-  {"pwm", cmd_pwm},
-  {NULL, NULL}
-};
+    {"pwm", cmd_pwm},
+    {NULL, NULL}};
 
 static const ShellConfig shell_cfg1 = {
-  (BaseSequentialStream *)&SDU1,
-  commands
-};
+    (BaseSequentialStream *)&SDU1,
+    commands};
 
 /*
  * Shell exit event.
  */
-static void ShellHandler(eventid_t id) {
+static void ShellHandler(eventid_t id)
+{
   (void)id;
-  if (chThdTerminatedX(shelltp)) {
+  if (chThdTerminatedX(shelltp))
+  {
     chThdRelease(shelltp);
     shelltp = NULL;
   }
@@ -83,10 +71,10 @@ static void ShellHandler(eventid_t id) {
 /*
  * Application entry point.
  */
-int main(void) {
+int main(void)
+{
   static const evhandler_t evhndl[] = {
-    ShellHandler
-  };
+      ShellHandler};
 
   event_listener_t el0;
   /*
@@ -98,7 +86,7 @@ int main(void) {
    */
   halInit();
   chSysInit();
-  
+
   sduObjectInit(&SDU1);
   sduStart(&SDU1, &serusbcfg);
 
@@ -114,14 +102,12 @@ int main(void) {
    * Event zero is shell exit.
    */
   shellInit();
-  
+
   /*
    * Starts the PWM channel 0 using 75% duty cycle.
    */
   pwmStart(&PWMD1, &pwmcfg);
   pwmEnableChannel(&PWMD1, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD1, 7500));
-
-
 
   /*
    * Starting the watchdog driver.
@@ -132,13 +118,16 @@ int main(void) {
    * Normal main() thread activity, in this demo it does nothing except
    * sleeping in a loop and check the button state.
    */
-  while (true) {
-    if (!shelltp && SDU1.config->usbp->state == USB_ACTIVE) {
+  while (true)
+  {
+    if (!shelltp && SDU1.config->usbp->state == USB_ACTIVE)
+    {
       shelltp = chThdCreateFromHeap(NULL, SHELL_WA_SIZE,
-                                       "shell1", NORMALPRIO + 1,
-                                       shellThread, (void *)&shell_cfg1);
+                                    "shell", NORMALPRIO + 1,
+                                    shellThread, (void *)&shell_cfg1);
     }
-    if (palReadPad(GPIOA, GPIOA_BUTTON)) {
+    if (palReadPad(GPIOA, GPIOA_BUTTON))
+    {
     }
     chEvtDispatch(evhndl, chEvtWaitOneTimeout(EVENT_MASK(0), TIME_MS2I(500)));
     wdgReset(&WDGD1);
