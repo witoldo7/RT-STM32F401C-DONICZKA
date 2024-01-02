@@ -121,6 +121,7 @@ CSRC = $(ALLCSRC) \
        $(CHIBIOS)/os/various/evtimer.c \
        drivers/usbcfg.c \
        drivers/as5048b.c \
+       drivers/as3935.c \
        utils.c \
        main.c
 
