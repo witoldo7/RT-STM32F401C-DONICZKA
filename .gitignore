@@ -1,6 +1,7 @@
 # Project specific
 .dep/
 build/
+.vscode/
 
 # Prerequisites
 *.d

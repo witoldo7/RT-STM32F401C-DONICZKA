@@ -12,6 +12,8 @@
 #include "shell.h"
 #include "chprintf.h"
 #include "usbcfg.h"
+#include "utils.h"
+#include "as5048b.h"
 
 /*
  * Watchdog deadline set to more than one second (LSI=40000 / (64 * 1000)).
@@ -21,7 +23,28 @@ static const WDGConfig wdgcfg = {
     STM32_IWDG_RL(1000)};
 
 /*===========================================================================*/
-/* PWM                                                             */
+/* I2C interface #1                                                          */
+/*===========================================================================*/
+/*  */
+static const I2CConfig i2cfg1 = {
+    OPMODE_I2C,
+    400000,
+    FAST_DUTY_CYCLE_2,
+};
+
+/*===========================================================================*/
+/* AS5048B Rotary sensor                                                     */
+/*===========================================================================*/
+static AS5048BConfig as5048cfg = {
+    &I2CD1,
+    &i2cfg1,
+    AS5048_ADDRESS,
+};
+
+static AS5048BDriver AS5048B;
+
+/*===========================================================================*/
+/* PWM                                                                       */
 /*===========================================================================*/
 static PWMConfig pwmcfg = {
     8000000, /* 10kHz PWM clock frequency.   */
@@ -45,10 +68,25 @@ static void cmd_pwm(BaseSequentialStream *chp, int argc, char *argv[])
   pwmEnableChannel(&PWMD1, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD1, atoi(argv[0])));
 }
 
+static void cmd_r(BaseSequentialStream *chp, int argc, char *argv[])
+{
+  (void)argc;
+  (void)argv;
+
+  while (true)
+  {
+    AS5048B.vmt->updateMovingAvgExp(&AS5048B);
+    double angle = AS5048B.vmt->getMovingAvgExp(U_DEG);
+    chprintf(chp, "Angle: %3.1f , Wind Direction: %s\r\n", angle, degreeToCompass(angle));
+    osalThreadSleepMilliseconds(50);
+  }
+}
+
 thread_t *shelltp = NULL;
 #define SHELL_WA_SIZE THD_WORKING_AREA_SIZE(2048)
 static const ShellCommand commands[] = {
     {"pwm", cmd_pwm},
+    {"r", cmd_r},
     {NULL, NULL}};
 
 static const ShellConfig shell_cfg1 = {
@@ -113,6 +151,14 @@ int main(void)
    * Starting the watchdog driver.
    */
   wdgStart(&WDGD1, &wdgcfg);
+
+  /*
+   * Starts the Rotary sensor driver.
+   */
+  as5048BObjectInit(&AS5048B);
+  as5048BStart(&AS5048B, &as5048cfg);
+  AS5048B.vmt->setClockWise(true);
+  AS5048B.vmt->zeroRegW(&AS5048B, 0);
 
   /*
    * Normal main() thread activity, in this demo it does nothing except

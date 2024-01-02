@@ -120,6 +120,8 @@ LDSCRIPT= $(STARTUPLD)/STM32F401xC.ld
 CSRC = $(ALLCSRC) \
        $(CHIBIOS)/os/various/evtimer.c \
        drivers/usbcfg.c \
+       drivers/as5048b.c \
+       utils.c \
        main.c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
