@@ -9,6 +9,10 @@
 
 #include "hal.h"
 
+#if !HAL_USE_I2C
+#error "AS5048B requires HAL_USE_I2C"
+#endif
+
 // Default addresses for AS5048B
 #define AS5048_ADDRESS 0x40 // 0b10000 + ( A1 & A2 to GND)
 #define AS5048B_PROG_REG 0x03
