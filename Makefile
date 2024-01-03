@@ -122,6 +122,7 @@ CSRC = $(ALLCSRC) \
        drivers/usbcfg.c \
        drivers/as5048b.c \
        drivers/as3935.c \
+       drivers/bme280.c \
        utils.c \
        main.c
 
