@@ -89,7 +89,4 @@ void as5048BObjectInit(AS5048BDriver *devp);
 void as5048BStart(AS5048BDriver *devp, AS5048BConfig *config);
 void as5048BStop(AS5048BDriver *devp);
 
-//utils
-char *degreeToCompass(double angle);
-
 #endif /* DRIVERS_AS5048B_H_ */
