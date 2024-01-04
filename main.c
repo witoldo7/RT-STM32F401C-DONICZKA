@@ -15,6 +15,7 @@
 #include "utils.h"
 #include "as5048b.h"
 #include "as3935.h"
+#include "bme280.h"
 
 /*
  * Watchdog deadline set to more than one second (LSI=40000 / (64 * 1000)).
@@ -54,6 +55,17 @@ static const AS3935Config as3935cfg = {
 };
 
 static AS3935Driver AS3935;
+
+/*===========================================================================*/
+/* BME280 Temperature/Presure/Humanidity Sensor                              */
+/*===========================================================================*/
+static const BME280Config bme280cfg = {
+    &I2CD1,
+    &i2cfg1,
+    BME280_ADDR_G,
+};
+
+static BME280Driver BME280;
 
 /*===========================================================================*/
 /* PWM                                                                       */
@@ -102,12 +114,31 @@ static void cmd_l(BaseSequentialStream *chp, int argc, char *argv[])
   chprintf(chp, "Distance to storm: %d km \r\n", AS3935.vmt->distanceToStorm(&AS3935));
 }
 
+static void cmd_t(BaseSequentialStream *chp, int argc, char *argv[])
+{
+  (void)argc;
+  (void)argv;
+  if (BME280.state != BME280_READY)
+  {
+    chprintf(chp, "BME280 Driver not ready");
+  }
+  if (BME280.vmt->readUTPH(&BME280) == BME280_SUCCESS)
+  {
+    chprintf(chp, "T: %3.2f C, H: %3.2f %%, P: %6.2f Pa, \r\n", BME280.data.temperature, BME280.data.humidity, BME280.data.presure);
+  }
+  else
+  {
+    chprintf(chp, "Failed to read T/H/P");
+  }
+}
+
 thread_t *shelltp = NULL;
 #define SHELL_WA_SIZE THD_WORKING_AREA_SIZE(2048)
 static const ShellCommand commands[] = {
     {"pwm", cmd_pwm},
     {"r", cmd_r},
     {"l", cmd_l},
+    {"t", cmd_t},
     {NULL, NULL}};
 
 static const ShellConfig shell_cfg1 = {
@@ -186,6 +217,12 @@ int main(void)
    */
   as3935ObjectInit(&AS3935);
   as3935Start(&AS3935, &as3935cfg);
+
+  /*
+   * Starts the BME280 sensor driver.
+   */
+  bme280ObjectInit(&BME280);
+  bme280Start(&BME280, &bme280cfg);
 
   /*
    * Normal main() thread activity, in this demo it does nothing except
